@@ -191,34 +191,50 @@ int get_record_count(const char* full_path) {
     return file_size / sizeof(Record);
 }
 
-int edit_record(const char* full_path, const int index) {
-    FILE* file = fopen(full_path, "rb+");
+int edit_record(const char* full_path, const int index, Record updated_record) {
+    FILE* file = fopen(full_path, "rb");
     if (!file) return 0;
 
-    fseek(file, strlen(DESCRIPTOR), SEEK_SET);
-    int c;
-    while ((c = fgetc(file)) != EOF && (c == '\n' || c == '\r')){}
-    if (c != EOF) ungetc(c, file);
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    fseek(file, index * sizeof(Record), SEEK_CUR);
-
-    Record record;
-    if (fread(&record, sizeof(Record), 1, file) != 1) {
+    char* buffer = malloc(file_size);
+    if (!buffer) {
         fclose(file);
         return 0;
     }
+    fread(buffer, 1, file_size, file);
+    fclose(file);
 
-    printf("\nCurrent record:\n");
-    printf("Region: %s\nArea: %u\nPopulation: %u\n\n", record.region, record.area, record.population);
+    size_t desc_len = strlen(DESCRIPTOR);
+    size_t records_size = file_size - (desc_len + 2);
+    int total_records = records_size / sizeof(Record);
 
-    Record new_record = get_record_input();
-
-    fseek(file, -sizeof(Record), SEEK_CUR);
-    if (fwrite(&new_record, sizeof(Record), 1, file) != 1) {
-        fclose(file);
+    if (index >= total_records || index < 0) {
+        free(buffer);
         return 0;
     }
 
+    file = fopen(full_path, "wb");
+    if (!file) {
+        free(buffer);
+        return 0;
+    }
+    char* records_start = buffer + desc_len + 2;
+    fwrite(buffer, 1, desc_len + 2, file);
+    if (index > 0) {
+        fwrite(records_start, sizeof(Record), index, file);
+    }
+    fwrite(&updated_record, sizeof(Record), 1, file);
+    if (index < total_records - 1) {
+        fwrite(records_start + ((index + 1) * sizeof(Record)),
+               sizeof(Record),
+               total_records - index - 1,
+               file);
+    }
+
+    free(buffer);
     fclose(file);
     return 1;
 }
@@ -238,7 +254,7 @@ void edit_record_wrapper(const char* full_path) {
         clear_input_buffer();
     } while (index == 0 || index > count);
 
-    if (!edit_record(full_path, index+1)) {
+    if (!edit_record(full_path, index-1, get_record_input())) {
         printf("Failed to edit record.\n");
         return;
     }
