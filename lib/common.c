@@ -1,6 +1,7 @@
 #include "common.h"
 #include "validation.h"
 #include "sort.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <conio.h>
@@ -106,12 +107,9 @@ void create_file_wrapper() {
 Record get_record_input() {
     Record record = {0, 0, 0};
 
-    get_input(TYPE_STRING, &record.region, "Enter region name: ", is_region_valid, "Error: region must be under 40 characters and not empty.\n");
-
-    get_input(TYPE_UNSIGNED, &record.area, "Enter area: ", is_positive, "Error: area must be positive.\n");
-
-    get_input(TYPE_UNSIGNED, &record.population, "Enter population: ", is_positive, "Error: population must be positive.\n");
-
+    get_input(TYPE_STRING, &record.region, "Enter region name (less than 40 characters): ", is_region_valid, "Error: region must be under 40 characters and not empty.\n");
+    get_input(TYPE_UNSIGNED, &record.area, "Enter area (up to 1e9): ", is_record_number_in_range, "Error: area not in range.\n");
+    get_input(TYPE_UNSIGNED, &record.population, "Enter population (up to 1e9): ", is_record_number_in_range, "Error: population not in range.\n");
     return record;
 }
 
@@ -138,26 +136,8 @@ int read_records(const char *full_path) {
         return 0;
     }
 
-    char file_descriptor[50];
-    const ushort desc_len = strlen(DESCRIPTOR);
-    if (fread(file_descriptor, 1, desc_len, file) != desc_len) {
-        printf("Error reading descriptor.\n");
-        fclose(file);
-        return 0;
-    }
-    file_descriptor[desc_len] = '\0';
-
-    if (strcmp(file_descriptor, DESCRIPTOR) != 0) {
-        printf("Error: trying to open a file with different descriptor.\n");
-        fclose(file);
-        return 0;
-    }
-
     int c;
-    while ((c = fgetc(file)) != EOF && (c == '\n' || c == '\r')){}
-    if (c != EOF) {
-        ungetc(c, file);
-    }
+    while ((c = fgetc(file)) != EOF && c != '\n') {}
 
     Record record;
     ushort count = 0;
@@ -429,7 +409,7 @@ void open_file_wrapper(const char *full_path) {
                 wait_for_input();
                 break;
             case '3':
-                sort_by_wrapper();
+                sort_by_wrapper(full_path);
                 wait_for_input();
                 break;
             case '4':
@@ -446,6 +426,25 @@ void open_file_wrapper(const char *full_path) {
                 break;
         }
     } while (choice != '0');
+}
+
+int validate_file_descriptor(const char* filepath) {
+    FILE* file = fopen(filepath, "r");
+    if (!file) return 0;
+
+    char first_line[256];
+    if (!fgets(first_line, sizeof(first_line), file)) {
+        fclose(file);
+        return 0;
+    }
+
+    ushort len = strlen(first_line);
+    if (len > 0 && first_line[len-1] == '\n') {
+        first_line[len-1] = '\0';
+    }
+
+    fclose(file);
+    return strcmp(first_line, DESCRIPTOR) == 0;
 }
 
 void select_file(const Operation operation) {
@@ -501,6 +500,14 @@ void select_file(const Operation operation) {
     } while (index == 0 || index > count);
 
     snprintf(full_path, MAX_PATH_SIZE, "%s%s", FOLDER_PATH, file_names[index - 1]);
+
+    if (!validate_file_descriptor(full_path)) {
+        printf("Error: the file has either different or no descriptor.\n");
+        wait_for_input();
+        closedir(dir);
+        return;
+    }
+
     switch (operation) {
         case OPEN:
             open_file_wrapper(full_path);

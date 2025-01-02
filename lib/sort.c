@@ -7,13 +7,43 @@
 #include <stdlib.h>
 #include <string.h>
 
-int compare_region(const void* a, const void* b) {
-    const Record* record_a = (const Record*)a;
-    const Record* record_b = (const Record*)b;
+int region_asc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
     return strcmp(record_a->region, record_b->region) > 0;
 }
 
-int sort_region_asc(const char* full_path) {
+int region_desc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
+    return strcmp(record_a->region, record_b->region) < 0;
+}
+
+int area_asc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
+    return record_a->area > record_b->area;
+}
+
+int area_desc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
+    return record_a->area < record_b->area;
+}
+
+int population_asc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
+    return record_a->population > record_b->population;
+}
+
+int population_desc(const void* a, const void* b) {
+    const Record* record_a = a;
+    const Record* record_b = b;
+    return record_a->population < record_b->population;
+}
+
+int sort_records(const char* full_path, int (*sort_condition)(const void*, const void*)) {
     FILE* file = fopen(full_path, "rb");
     if (!file) return 0;
 
@@ -35,11 +65,12 @@ int sort_region_asc(const char* full_path) {
     int total_records = records_size / sizeof(Record);
 
     if (total_records <= 1) {
+        printf(RED"Error: not enough records to sort.\n"RESET);
         free(buffer);
-        return 1;
+        return 0;
     }
 
-    qsort(records_start, total_records, sizeof(Record), compare_region);
+    qsort(records_start, total_records, sizeof(Record), sort_condition);
 
     file = fopen(full_path, "wb");
     if (!file) {
@@ -55,7 +86,7 @@ int sort_region_asc(const char* full_path) {
     return 1;
 }
 
-int sort_by(const char *full_path, const ushort is_asc) {
+void sort_by(const char *full_path, const ushort is_asc) {
     char choice = 0;
     do {
         system("cls");
@@ -63,23 +94,34 @@ int sort_by(const char *full_path, const ushort is_asc) {
         printf("Enter the number of the field you want to sort by: ");
         choice = getch();
         system("cls");
-        switch (choice) {
-            case '1':
-                if (is_asc) {
-                    sort_region_asc(full_path);
-                } else {
 
-                }
-            break;
-            case '2':
+        switch(choice) {
+            case '1': {
+                int (*func)(const void*, const void*) = is_asc ? region_asc : region_desc;
+                printf(sort_records(full_path, func) ?
+                    GREEN"Records sorted successfully.\n"RESET :
+                    "Failed to sort records.\n");
                 break;
-            case '3':
+            }
+            case '2': {
+                int (*func)(const void*, const void*) = is_asc ? area_asc : area_desc;
+                printf(sort_records(full_path, func) ?
+                    GREEN"Records sorted successfully.\n"RESET :
+                    "Failed to sort records.\n");
                 break;
+            }
+            case '3': {
+                int (*func)(const void*, const void*) = is_asc ? population_asc : population_desc;
+                printf(sort_records(full_path, func) ?
+                    GREEN"Records sorted successfully.\n"RESET :
+                    "Failed to sort records.\n");
+                break;
+            }
             default:
+                printf("Error: invalid choice.\n");
                 break;
         }
-    } while (choice != '1' && choice != '2' && choice != '3');
-    return 1;
+    } while (choice < '1' || choice > '3');
 }
 
 void sort_by_wrapper(const char *full_path) {
@@ -91,14 +133,14 @@ void sort_by_wrapper(const char *full_path) {
         is_asc = getch();
         system("cls");
         switch (is_asc) {
-            case '0':
+            case '1':
                 sort_by(full_path, 0);
                 break;
-            case '1':
+            case '2':
                 sort_by(full_path, 1);
                 break;
             default:
                 break;
         }
-    } while (is_asc != '0' && is_asc != '1');
+    } while (is_asc != '1' && is_asc != '2');
 }

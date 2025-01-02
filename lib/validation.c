@@ -24,8 +24,9 @@ bool is_region_valid(void *value) {
     return length != 0 && length < 40;
 }
 
-bool is_positive(void *value) {
-    return value > 0;
+bool is_record_number_in_range(void *value) {
+    const unsigned temp = *(unsigned*)value;
+    return temp < MAX_RECORD_NUMBER;
 }
 
 void get_input(const DataType type, void *variable, const char *print_msg, bool (*condition)(void*), const char *error_msg) {
@@ -136,8 +137,8 @@ void print_sort_order_menu() {
         "-----------------------------\n"
         RESET
         BOLD
-        "\t0. Descension\n"
-        "\t1. Ascension\n"
+        "\t1. Descension\n"
+        "\t2. Ascension\n"
         "-----------------------------\n"
         RESET);
 }

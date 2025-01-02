@@ -28,7 +28,6 @@ int main(void) {
                 select_file(OPEN);
                 break;
             case '3':
-                // check for descriptor
                 select_file(DELETE);
                 break;
             default:

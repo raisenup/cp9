@@ -15,6 +15,7 @@
 #define WHITE       "\x1b[37m"
 
 #define MAX_PATH_SIZE 255
+#define MAX_RECORD_NUMBER 1e9
 
 typedef unsigned short ushort;
 
@@ -33,7 +34,7 @@ bool is_filename_valid(void *value);
 
 bool is_region_valid(void *value);
 
-bool is_positive(void *value);
+bool is_record_number_in_range(void *value);
 
 void get_input(const DataType type, void *variable, const char *print_msg, bool (*condition)(void*), const char *error_msg);
 
